@@ -1,4 +1,3 @@
-void obd_id_class(can_message_t rx_msg);
 // Data acquired and processed.
 uint16_t RPM;
 uint16_t SPD;
@@ -27,7 +26,6 @@ static const can_message_t start_message_TPS = {.identifier = ID_HELLO_ECU, .dat
 //Fuel Level
 static const can_message_t start_message_FUL = {.identifier = ID_HELLO_ECU, .data_length_code = 8,
                                             .flags = CAN_MSG_FLAG_NONE, .data = {0x02,SERVICE_MODE_CURRENT,ID_ENGINE_FUL,01,55,55,55,55}};                                              
-
 //Odometer
 static const can_message_t start_message_ODO = {.identifier = ID_HELLO_ECU, .data_length_code = 8,
                                             .flags = CAN_MSG_FLAG_NONE, .data = {0x02,SERVICE_MODE_CURRENT,ID_ENGINE_ODO,55,55,55,55,55}};                                              
