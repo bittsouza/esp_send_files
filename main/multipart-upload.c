@@ -221,6 +221,3 @@ void http_post_task(void *pvParameters)
 
 	}
 }
-
-  git config --global user.email "gabrielbittsouza@gmail.com"
-  git config --global user.name "bittsouza"

@@ -97,29 +97,29 @@ static const can_general_config_t g_config = {.mode = CAN_MODE_NO_ACK,
 
 //RPM
 static const can_message_t start_message_RPM = {.identifier = ID_HELLO_ECU, .data_length_code = 8,
-                                            .flags = CAN_MSG_FLAG_NONE, .data = {0x02,SERVICE_MODE_CURRENT,ID_ENGINE_RPM,55,55,55,55,55}};                                              
+                                            .flags = CAN_MSG_FLAG_NONE, .data = {0x02,SERVICE_MODE_CURRENT,ID_ENGINE_RPM,55,55,55,55,55}};
 //speed
 static const can_message_t start_message_SPD = {.identifier = ID_HELLO_ECU, .data_length_code = 8,
-                                            .flags = CAN_MSG_FLAG_NONE, .data = {0x02,SERVICE_MODE_CURRENT,ID_ENGINE_SPD,01,55,55,55,55}};                                              
+                                            .flags = CAN_MSG_FLAG_NONE, .data = {0x02,SERVICE_MODE_CURRENT,ID_ENGINE_SPD,01,55,55,55,55}};
 //Intake Temp
 static const can_message_t start_message_INT = {.identifier = ID_HELLO_ECU, .data_length_code = 8,
-                                            .flags = CAN_MSG_FLAG_NONE, .data = {0x02,SERVICE_MODE_CURRENT,ID_ENGINE_INT,01,55,55,55,55}};                                              
+                                            .flags = CAN_MSG_FLAG_NONE, .data = {0x02,SERVICE_MODE_CURRENT,ID_ENGINE_INT,01,55,55,55,55}};
 //Throttle position
 static const can_message_t start_message_TPS = {.identifier = ID_HELLO_ECU, .data_length_code = 8,
-                                            .flags = CAN_MSG_FLAG_NONE, .data = {0x02,SERVICE_MODE_CURRENT,ID_ENGINE_TPS,01,55,55,55,55}};                                              
+                                            .flags = CAN_MSG_FLAG_NONE, .data = {0x02,SERVICE_MODE_CURRENT,ID_ENGINE_TPS,01,55,55,55,55}};
 // //Fuel Level
 // static const can_message_t start_message_FUL = {.identifier = ID_HELLO_ECU, .data_length_code = 8,
-//                                             .flags = CAN_MSG_FLAG_NONE, .data = {0x02,SERVICE_MODE_CURRENT,ID_ENGINE_FUL,01,55,55,55,55}};                                              
+//                                             .flags = CAN_MSG_FLAG_NONE, .data = {0x02,SERVICE_MODE_CURRENT,ID_ENGINE_FUL,01,55,55,55,55}};
 
 // //Odometer
 // static const can_message_t start_message_ODO = {.identifier = ID_HELLO_ECU, .data_length_code = 8,
-//                                             .flags = CAN_MSG_FLAG_NONE, .data = {0x02,SERVICE_MODE_CURRENT,ID_ENGINE_ODO,55,55,55,55,55}};                                              
+//                                             .flags = CAN_MSG_FLAG_NONE, .data = {0x02,SERVICE_MODE_CURRENT,ID_ENGINE_ODO,55,55,55,55,55}};
 //Lambda sensor
 static const can_message_t start_message_LBD = {.identifier = ID_HELLO_ECU, .data_length_code = 8,
-                                            .flags = CAN_MSG_FLAG_NONE, .data = {0x02,SERVICE_MODE_CURRENT,ID_ENGINE_LBD,55,55,55,55,55}};                                              
+                                            .flags = CAN_MSG_FLAG_NONE, .data = {0x02,SERVICE_MODE_CURRENT,ID_ENGINE_LBD,55,55,55,55,55}};
 //Run time engine
 static const can_message_t start_message_RTM = {.identifier = ID_HELLO_ECU, .data_length_code = 8,
-                                            .flags = CAN_MSG_FLAG_NONE, .data = {0x02,SERVICE_MODE_CURRENT,ID_ENGINE_RTM,55,55,55,55,55}};                                              
+                                            .flags = CAN_MSG_FLAG_NONE, .data = {0x02,SERVICE_MODE_CURRENT,ID_ENGINE_RTM,55,55,55,55,55}};
 
 
 
@@ -165,14 +165,15 @@ static int s_retry_num = 0;
 
 void read_log();
 void wifi_init_stat(void);
+void http_post_task(void *pvParameters);
 
 uint32_t iterations = 0;
 // static void can_receive_task(void *arg)
 void can_receive_task(void *arg)
 {
-   
-    
-    
+
+
+
     //uint32_t cont = 0;
 
     while (iterations < NO_OF_ITERS) {
@@ -185,11 +186,11 @@ void can_receive_task(void *arg)
         error_tx_can =  can_transmit(&start_message_INT, portMAX_DELAY);
         obd_id_class(rx_msg);
         vTaskDelay(5/portTICK_PERIOD_MS);
-        
+
         // error_tx_can =  can_transmit(&start_message_FUL, portMAX_DELAY);
         // obd_id_class(rx_msg);
         // vTaskDelay(5/portTICK_PERIOD_MS);
-        
+
         error_tx_can =  can_transmit(&start_message_SPD, portMAX_DELAY);
         obd_id_class(rx_msg);
         vTaskDelay(5/portTICK_PERIOD_MS);
@@ -209,7 +210,7 @@ void can_receive_task(void *arg)
         if(error_tx_can == ESP_OK){
             //ESP_LOGI(EXAMPLE_TAG, "Transmitted start command");
             Contador_TX=1;
-        } 
+        }
         else{
             ESP_LOGI(EXAMPLE_TAG, "ERRO_TX");
         }
@@ -217,15 +218,51 @@ void can_receive_task(void *arg)
         ESP_LOGI(EXAMPLE_TAG, "iteration n:%i", iterations);
     }
 
-    
 
-    if (iterations>NO_OF_ITERS){
-        ESP_LOGI(EXAMPLE_TAG, "OPPENING LOG ...");
-        read_log();
-    }
-    
-    // wifi_init_stat();
-    // return endlog;
+    ESP_LOGI(EXAMPLE_TAG, "OPPENING LOG ...");
+    // read_log();
+
+     // Create Queue
+	xQueueRequest = xQueueCreate( 1, sizeof(REQUEST_t) );
+	xQueueResponse = xQueueCreate( 1, sizeof(RESPONSE_t) );
+	configASSERT( xQueueRequest );
+	configASSERT( xQueueResponse );
+
+	// Create Task
+	xTaskCreate(&http_post_task, "POST", 4096, NULL, 5, NULL);
+
+    // Search Directory
+	DIR* dir = opendir("/spiffs/");
+	assert(dir != NULL);
+
+	REQUEST_t requestBuf;
+	requestBuf.command = CMD_SEND;
+	requestBuf.taskHandle = xTaskGetCurrentTaskHandle();
+	RESPONSE_t responseBuf;
+	while (true) {
+		struct dirent*pe = readdir(dir);
+		if (!pe) break;
+		ESP_LOGI(TAG, "d_name=%s d_ino=%d d_type=%x", pe->d_name,pe->d_ino, pe->d_type);
+		strcpy(requestBuf.remoteFileName, pe->d_name);
+		strcpy(requestBuf.localFileName, "/spiffs/");
+		strcat(requestBuf.localFileName, pe->d_name);
+		if (xQueueSend(xQueueRequest, &requestBuf, 10) != pdPASS) {
+			ESP_LOGE(TAG, "xQueueSend fail");
+		} else {
+			xQueueReceive(xQueueResponse, &responseBuf, portMAX_DELAY);
+			ESP_LOGI(TAG, "\n%s", responseBuf.response);
+#if 0
+			for(int i = 0; i < strlen(responseBuf.response); i++) {
+				putchar(responseBuf.response[i]);
+			}
+			printf("\n");
+#endif
+		}
+	} // end while
+	closedir(dir);
+	ESP_LOGI(TAG, "All file uploded");
+
+
     vTaskDelete(NULL);
 }
 
@@ -260,7 +297,7 @@ void wifi_init_sta(void)
     //    ESP_LOGI(EXAMPLE_TAG, "WAITING FOR LOG END...");
     //    vTaskDelay(2000/portTICK_PERIOD_MS);
     // }
-    
+
     s_wifi_event_group = xEventGroupCreate();
 
     ESP_ERROR_CHECK(esp_netif_init());
@@ -419,7 +456,7 @@ static void http_get_task(void *pvParameters)
     }
 }
 
-void http_post_task(void *pvParameters);
+
 
 void setup_spiffs(){
     //Initialize NVS
@@ -459,16 +496,16 @@ void setup_spiffs(){
     } else {
         ESP_LOGI(TAG, "Partition size: total: %d, used: %d", total, used);
     }
-    
-    
+
+
     //DELETING THE LAST LOG
     unlink("/spiffs/hello.csv");
-    ESP_LOGI(TAG, "Opening file");    
+    ESP_LOGI(TAG, "Opening file");
     FILE* f = fopen("/spiffs/hello.csv", "a");
     if (f == NULL) {
         ESP_LOGE(TAG, "Failed to open file for writing");
         return;
-    }    
+    }
     //WRITING THE HEADER OF THE LOG
     fprintf(f, "TPS(%%),INT(C),KPH,RPM,LBD,RTM(S)\r\n");
     fclose(f);
@@ -483,8 +520,8 @@ void obd_id_class(can_message_t rx_msg){
     if (f == NULL) {
         ESP_LOGE(TAG, "Failed to open file for writing");
         return;
-    }    
-    
+    }
+
     error_rx_can = can_receive(&rx_msg, portMAX_DELAY);
     // ESP_LOGI(EXAMPLE_TAG, "STOAQU");
         if(error_rx_can == ESP_OK){
@@ -494,16 +531,16 @@ void obd_id_class(can_message_t rx_msg){
                 // ESP_LOGI(EXAMPLE_TAG, "STOAQU2");
             } else{
 
-            
+
                 switch (rx_msg.data[2])
-                {   
-                    
+                {
+
                     case ID_ENGINE_RPM:
                         RPM = (((rx_msg.data[3]*256)+rx_msg.data[4])/4); //RPM=(((A*256)+B)/4)
                         ESP_LOGI(EXAMPLE_TAG, "RPM: %d", RPM);
                         dataobd2.RPM=RPM;
                         fprintf(f, "%i,", dataobd2.RPM);
-                    break;  
+                    break;
 
                     case ID_ENGINE_SPD:
                         SPD = (rx_msg.data[3]);
@@ -519,21 +556,21 @@ void obd_id_class(can_message_t rx_msg){
                         fprintf(f, "%i,", dataobd2.INT);
                     break;
 
-                    case ID_ENGINE_TPS: 
+                    case ID_ENGINE_TPS:
                         TPS = ((rx_msg.data[3]*100)/255);
                         ESP_LOGI(EXAMPLE_TAG, "TPS: %d %%", TPS);
                         dataobd2.TPS=TPS;
                         fprintf(f, "%i\n", dataobd2.TPS);
                     break;
-            
+
                     case ID_ENGINE_FUL:
                         //FUL = ((rx_msg.data[3]*100)/255);
                         // ESP_LOGI(EXAMPLE_TAG, "FUEL LEVEL: %d %%", FUL);
                     break;
-                    
+
                     case ID_ENGINE_ODO:
                         //ODO = (3660+((256*rx_msg.data[3])+rx_msg.data[4]));
-                        // ESP_LOGI(EXAMPLE_TAG, "ODO: %d Km", ODO);                     
+                        // ESP_LOGI(EXAMPLE_TAG, "ODO: %d Km", ODO);
                     break;
 
                     case 0x40:
@@ -552,7 +589,7 @@ void obd_id_class(can_message_t rx_msg){
                 }
             }
         }
-		else {     
+		else {
 
             ESP_LOGI(EXAMPLE_TAG, "ERRO");
 
@@ -578,10 +615,10 @@ void obd_id_class(can_message_t rx_msg){
     // fprintf(f, "1100,22,16\r\n");
     // fprintf(f, "1200,24,18\r\n");
     //fclose(f);
-    
+
     //ESP_LOGI(TAG, "File written");
 
-               
+
 }
 
 void read_log(){
@@ -609,66 +646,23 @@ void read_log(){
 void app_main(void)
 {
     setup_spiffs();
-    
+
     rx_sem = xSemaphoreCreateBinary();
     xTaskCreatePinnedToCore(can_receive_task, "CAN_rx", 4096, NULL, RX_TASK_PRIO, NULL, tskNO_AFFINITY);
-    
+
     //Install and start CAN driver
     ESP_ERROR_CHECK(can_driver_install(&g_config, &t_config, &f_config));
     ESP_LOGI(EXAMPLE_TAG, "Driver installed");
     ESP_ERROR_CHECK(can_start());
     ESP_LOGI(EXAMPLE_TAG, "Driver started");
-    
+
     vTaskDelay(2000 / portTICK_PERIOD_MS);
+
     //Wifi init
     ESP_LOGI(TAG, "ESP_WIFI_MODE_STA");
     wifi_init_sta();
 
     vTaskDelay(2000 / portTICK_PERIOD_MS);
-
-    // xTaskCreate(&http_get_task, "http_get_task", 4096, NULL, 5, NULL);
-
-    // Create Queue
-	xQueueRequest = xQueueCreate( 1, sizeof(REQUEST_t) );
-	xQueueResponse = xQueueCreate( 1, sizeof(RESPONSE_t) );
-	configASSERT( xQueueRequest );
-	configASSERT( xQueueResponse );
-
-	// Create Task
-	xTaskCreate(&http_post_task, "POST", 4096, NULL, 5, NULL);
-
-    // Search Directory
-	DIR* dir = opendir("/spiffs/");
-	assert(dir != NULL);
-
-	REQUEST_t requestBuf;
-	requestBuf.command = CMD_SEND;
-	requestBuf.taskHandle = xTaskGetCurrentTaskHandle();
-	RESPONSE_t responseBuf;
-	while (true) {
-		struct dirent*pe = readdir(dir);
-		if (!pe) break;
-		ESP_LOGI(TAG, "d_name=%s d_ino=%d d_type=%x", pe->d_name,pe->d_ino, pe->d_type);
-		strcpy(requestBuf.remoteFileName, pe->d_name);
-		strcpy(requestBuf.localFileName, "/spiffs/");
-		strcat(requestBuf.localFileName, pe->d_name);
-		if (xQueueSend(xQueueRequest, &requestBuf, 10) != pdPASS) {
-			ESP_LOGE(TAG, "xQueueSend fail");
-		} else {
-			xQueueReceive(xQueueResponse, &responseBuf, portMAX_DELAY);
-			ESP_LOGI(TAG, "\n%s", responseBuf.response);
-#if 0
-			for(int i = 0; i < strlen(responseBuf.response); i++) {
-				putchar(responseBuf.response[i]);
-			}
-			printf("\n");
-#endif
-		}
-	} // end while
-	closedir(dir);
-	ESP_LOGI(TAG, "All file uploded");
-
-    vTaskDelay(5000/portMAX_DELAY);
 
     //Stop and uninstall CAN driver
     ESP_ERROR_CHECK(can_stop());
