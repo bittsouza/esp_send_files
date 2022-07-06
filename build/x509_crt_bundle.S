@@ -1,4 +1,4 @@
-/* * Data converted from /Users/bitt/Workspace/station/build/esp-idf/mbedtls/x509_crt_bundle
+/* * Data converted from C:/workspace/espidf/esp_send_files/build/esp-idf/mbedtls/x509_crt_bundle
  */
 .data
 .section .rodata.embedded

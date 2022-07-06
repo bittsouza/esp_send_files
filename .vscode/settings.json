@@ -10,5 +10,6 @@
     "*.js": "javascriptreact",
     "cmd.h": "c"
   },
-  "idf.adapterTargetName": "esp32"
+  "idf.adapterTargetName": "esp32",
+  "idf.portWin": "COM3"
 }
