@@ -101,9 +101,9 @@ static const can_message_t start_message_RPM = {.identifier = ID_HELLO_ECU, .dat
 //speed
 static const can_message_t start_message_SPD = {.identifier = ID_HELLO_ECU, .data_length_code = 8,
                                             .flags = CAN_MSG_FLAG_NONE, .data = {0x02,SERVICE_MODE_CURRENT,ID_ENGINE_SPD,01,55,55,55,55}};
-//Intake Temp
-static const can_message_t start_message_INT = {.identifier = ID_HELLO_ECU, .data_length_code = 8,
-                                            .flags = CAN_MSG_FLAG_NONE, .data = {0x02,SERVICE_MODE_CURRENT,ID_ENGINE_INT,01,55,55,55,55}};
+// //Intake Temp
+// static const can_message_t start_message_INT = {.identifier = ID_HELLO_ECU, .data_length_code = 8,
+//                                             .flags = CAN_MSG_FLAG_NONE, .data = {0x02,SERVICE_MODE_CURRENT,ID_ENGINE_INT,01,55,55,55,55}};
 //Throttle position
 static const can_message_t start_message_TPS = {.identifier = ID_HELLO_ECU, .data_length_code = 8,
                                             .flags = CAN_MSG_FLAG_NONE, .data = {0x02,SERVICE_MODE_CURRENT,ID_ENGINE_TPS,01,55,55,55,55}};
@@ -178,14 +178,16 @@ void can_receive_task(void *arg)
 
     while (iterations < NO_OF_ITERS) {
 
-        system("cls");
-        vTaskDelay(5/portTICK_PERIOD_MS);
+        
+
+        
+        // vTaskDelay(5/portTICK_PERIOD_MS);
         error_tx_can =  can_transmit(&start_message_TPS, portMAX_DELAY);
         obd_id_class(rx_msg);
-        vTaskDelay(5/portTICK_PERIOD_MS);
-        error_tx_can =  can_transmit(&start_message_INT, portMAX_DELAY);
-        obd_id_class(rx_msg);
-        vTaskDelay(5/portTICK_PERIOD_MS);
+        // vTaskDelay(5/portTICK_PERIOD_MS);
+        // error_tx_can =  can_transmit(&start_message_INT, portMAX_DELAY);
+        // obd_id_class(rx_msg);
+        // vTaskDelay(5/portTICK_PERIOD_MS);
 
         // error_tx_can =  can_transmit(&start_message_FUL, portMAX_DELAY);
         // obd_id_class(rx_msg);
@@ -193,19 +195,19 @@ void can_receive_task(void *arg)
 
         error_tx_can =  can_transmit(&start_message_SPD, portMAX_DELAY);
         obd_id_class(rx_msg);
-        vTaskDelay(5/portTICK_PERIOD_MS);
+        // vTaskDelay(5/portTICK_PERIOD_MS);
         error_tx_can =  can_transmit(&start_message_RPM, portMAX_DELAY);
         obd_id_class(rx_msg);
         // vTaskDelay(5/portTICK_PERIOD_MS);
         // error_tx_can =  can_transmit(&start_message_ODO, portMAX_DELAY);
         // obd_id_class(rx_msg);
-        vTaskDelay(5/portTICK_PERIOD_MS);
+        // vTaskDelay(5/portTICK_PERIOD_MS);
         error_tx_can =  can_transmit(&start_message_LBD, portMAX_DELAY);
         obd_id_class(rx_msg);
-        vTaskDelay(5/portTICK_PERIOD_MS);
+        // vTaskDelay(5/portTICK_PERIOD_MS);
         error_tx_can =  can_transmit(&start_message_RTM, portMAX_DELAY);
         obd_id_class(rx_msg);
-        vTaskDelay(5/portTICK_PERIOD_MS);
+        // vTaskDelay(5/portTICK_PERIOD_MS);
 
         if(error_tx_can == ESP_OK){
             //ESP_LOGI(EXAMPLE_TAG, "Transmitted start command");
@@ -507,7 +509,7 @@ void setup_spiffs(){
         return;
     }
     //WRITING THE HEADER OF THE LOG
-    fprintf(f, "TPS(%%),INT(C),KPH,RPM,LBD,RTM(S)\r\n");
+    fprintf(f, "KPH,RPM,LBD,RTM(S),TPS(%%)\r\n");
     fclose(f);
     ESP_LOGI(TAG, "File written");
 }
@@ -537,28 +539,28 @@ void obd_id_class(can_message_t rx_msg){
 
                     case ID_ENGINE_RPM:
                         RPM = (((rx_msg.data[3]*256)+rx_msg.data[4])/4); //RPM=(((A*256)+B)/4)
-                        ESP_LOGI(EXAMPLE_TAG, "RPM: %d", RPM);
+                        // ESP_LOGI(EXAMPLE_TAG, "RPM: %d", RPM);
                         dataobd2.RPM=RPM;
                         fprintf(f, "%i,", dataobd2.RPM);
                     break;
 
                     case ID_ENGINE_SPD:
                         SPD = (rx_msg.data[3]);
-                        ESP_LOGI(EXAMPLE_TAG, "SPEED: %d KPH", SPD);
+                        // ESP_LOGI(EXAMPLE_TAG, "SPEED: %d KPH", SPD);
                         dataobd2.SPD=SPD;
                         fprintf(f, "%i,", dataobd2.SPD);
                     break;
 
                     case ID_ENGINE_INT:
                         INT = ((rx_msg.data[3])-40);
-                        ESP_LOGI(EXAMPLE_TAG, "INTAKE: %d ºC", INT);
-                        dataobd2.INT=INT;
-                        fprintf(f, "%i,", dataobd2.INT);
+                        // ESP_LOGI(EXAMPLE_TAG, "INTAKE: %d C", INT);
+                        // dataobd2.INT=INT;
+                        // fprintf(f, "%i,", dataobd2.INT);
                     break;
 
                     case ID_ENGINE_TPS:
                         TPS = ((rx_msg.data[3]*100)/255);
-                        ESP_LOGI(EXAMPLE_TAG, "TPS: %d %%", TPS);
+                        // ESP_LOGI(EXAMPLE_TAG, "TPS: %d %%", TPS);
                         dataobd2.TPS=TPS;
                         fprintf(f, "%i\n", dataobd2.TPS);
                     break;
@@ -575,14 +577,14 @@ void obd_id_class(can_message_t rx_msg){
 
                     case 0x40:
                         LBD = ((256*rx_msg.data[3])/200);
-                        ESP_LOGI(EXAMPLE_TAG, "LBD: %d", LBD);
+                        // ESP_LOGI(EXAMPLE_TAG, "LBD: %d", LBD);
                         dataobd2.LBD=LBD;
                         fprintf(f, "%i,", dataobd2.LBD);
                     break;
 
                     case ID_ENGINE_RTM:
                         RTM = ((rx_msg.data[3]*256)+rx_msg.data[4]);
-                        ESP_LOGI(EXAMPLE_TAG, "RUNTIME: %d", RTM);
+                        // ESP_LOGI(EXAMPLE_TAG, "RUNTIME: %d", RTM);
                         dataobd2.RTM=RTM;
                         fprintf(f, "%i,", dataobd2.RTM);
                     break;
@@ -665,13 +667,13 @@ void app_main(void)
     vTaskDelay(2000 / portTICK_PERIOD_MS);
 
     //Stop and uninstall CAN driver
-    ESP_ERROR_CHECK(can_stop());
-    ESP_LOGI(EXAMPLE_TAG, "Driver stopped");
-    ESP_ERROR_CHECK(can_driver_uninstall());
-    ESP_LOGI(EXAMPLE_TAG, "Driver uninstalled");
+    // ESP_ERROR_CHECK(can_stop());
+    // ESP_LOGI(EXAMPLE_TAG, "Driver stopped");
+    // ESP_ERROR_CHECK(can_driver_uninstall());
+    // ESP_LOGI(EXAMPLE_TAG, "Driver uninstalled");
 
     //Cleanup
-    vSemaphoreDelete(rx_sem);
+    // vSemaphoreDelete(rx_sem);
 
 
 }
